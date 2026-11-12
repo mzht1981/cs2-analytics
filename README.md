@@ -1,0 +1,835 @@
+[index.html](https://github.com/user-attachments/files/34742849/index.html)
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CS2 Match Analytics — BI Dashboard</title>
+<style>
+:root{
+  --bg:#050810; --panel:#0c1220; --panel2:#111a2b; --border:#1a2540;
+  --amber:#fbbf24; --cyan:#22d3ee; --blue:#5da9ff; --mint:#34d399; --red:#f87171;
+  --text:#e8edf5; --muted:#8f9bb0; --dim:#31405f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Rubik','Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.55;
+  background-image:
+    radial-gradient(900px 400px at 12% -10%, rgba(251,191,36,.07), transparent 60%),
+    radial-gradient(900px 400px at 95% 110%, rgba(34,211,238,.06), transparent 60%);
+  background-attachment:fixed;
+}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:40;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(255,255,255,.012) 3px)}
+.font-display,.display{font-family:'Russo One','Arial Black',sans-serif}
+.data,.mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+@media(min-width:768px){.wrap{padding:0 24px}}
+
+/* Header */
+header{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--border);
+  background:rgba(5,8,16,.9);backdrop-filter:blur(10px)}
+.header-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding:12px 0}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-family:'Russo One','Arial Black',sans-serif;font-size:18px;letter-spacing:.04em;line-height:1.15}
+.brand h1 em{font-style:normal;color:var(--amber)}
+.brand .sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+nav{display:flex;gap:4px;overflow-x:auto;order:3;width:100%}
+@media(min-width:860px){nav{order:2;width:auto;margin-left:auto}}
+nav button{
+  font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  padding:9px 16px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+nav button:hover{background:var(--panel2);color:var(--text)}
+nav button[aria-current="page"]{background:var(--amber);color:#0a0c12;font-weight:700}
+.status{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+@media(min-width:860px){.status{margin-left:0;order:3}}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mint);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}*{transition-duration:.01ms!important}}
+
+/* Sections */
+main{padding:24px 0 64px}
+.tab{display:none}
+.tab.active{display:block}
+.stack>*+*{margin-top:20px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
+@media(min-width:768px){.panel{padding:20px}}
+.panel.flush{padding:0;overflow:hidden}
+.sec-title{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;margin-bottom:4px}
+.sec-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+
+/* Chips / filters */
+.filters{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.fgroup{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flabel{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;transition:.15s}
+.chip:hover{color:var(--text)}
+.chip.on{font-weight:700;color:#0a0c12;background:var(--amber);border-color:var(--amber)}
+.chip.on.c-blue{background:var(--blue);border-color:var(--blue)}
+.chip.on.c-cyan{background:var(--cyan);border-color:var(--cyan)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1100px){.kpis{grid-template-columns:repeat(6,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.kpi .l{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:'Russo One','Arial Black',sans-serif;font-size:26px;margin-top:8px;line-height:1}
+
+/* Grids */
+.g-5{display:grid;gap:20px}
+@media(min-width:1100px){.g-5{grid-template-columns:3fr 2fr}}
+.g-2{display:grid;gap:20px}
+@media(min-width:860px){.g-2{grid-template-columns:1fr 1fr}}
+
+/* Map bars */
+.maprow{margin-bottom:16px}
+.maprow:last-child{margin-bottom:0}
+.maphead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin-bottom:6px}
+.mapname{font-family:'Russo One','Arial Black',sans-serif;font-size:15px}
+.mapmvp{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-left:12px}
+.mapscore{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700}
+.mapbar{display:flex;height:14px;border-radius:3px;overflow:hidden}
+.mapbar>div{transition:width .3s}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px}
+.leg{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.leg i{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;min-width:880px;border-collapse:collapse;font-size:14px}
+th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+th.num,td.num{text-align:right}
+th button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px}
+th button:hover{color:var(--text)}
+th.sorted{color:var(--amber)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+tbody tr:last-child td{border-bottom:0}
+.avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:10px;flex-shrink:0}
+.pwrcell{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.pwrbar{width:56px;height:6px;border-radius:2px;background:var(--border);overflow:hidden;display:none}
+@media(min-width:1100px){.pwrbar{display:inline-block}}
+.pwrbar i{display:block;height:100%;border-radius:2px}
+.tbl-foot{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  padding:12px 16px;border-top:1px solid var(--border)}
+.pos{color:var(--mint)} .neg{color:var(--red)}
+
+/* Search */
+.search{position:relative;max-width:320px;margin-top:16px}
+.search input{width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 12px 9px 34px;
+  background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)}
+.search input:focus{outline:none;border-color:var(--amber)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.search input::placeholder{color:var(--muted)}
+
+/* Player */
+.pchips{display:flex;flex-wrap:wrap;gap:6px}
+.pchip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;border:1px solid var(--border);
+  border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;transition:.15s}
+.pchip:hover{color:var(--text)}
+.phead{display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:20px;border-bottom:1px solid var(--border)}
+.phead .avatar{width:56px;height:56px;font-size:18px}
+.pname{font-family:'Russo One','Arial Black',sans-serif;font-size:24px;line-height:1.1}
+.pmeta{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.pbest{margin-left:auto;display:flex;gap:32px}
+.pbest .l{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.pbest .v{font-family:'Russo One','Arial Black',sans-serif;font-size:17px;margin-top:4px}
+.pbest .v small{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+@media(min-width:640px){.statgrid{grid-template-columns:repeat(5,1fr)}}
+@media(min-width:1100px){.statgrid{grid-template-columns:repeat(9,1fr)}}
+.statgrid>div{background:var(--panel);padding:12px 14px}
+.statgrid .l{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.statgrid .v{font-family:'Russo One','Arial Black',sans-serif;font-size:17px;margin-top:6px;line-height:1}
+
+/* Bar chart (div-based) */
+.vbars{display:flex;align-items:flex-end;gap:10px;height:240px;padding-top:24px}
+.vbar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.vbar .b{width:70%;max-width:56px;border-radius:3px 3px 0 0;position:relative;transition:height .3s}
+.vbar .b span{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text)}
+.vbar .x{margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+
+/* Balance */
+.btn{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  padding:10px 18px;border-radius:4px;border:0;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--amber);color:#0a0c12}
+.btn-primary:hover{background:#ffd34d}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);font-weight:400}
+.btn-ghost:hover{color:var(--text)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.balbar-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+.balbar-row .l{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);width:90px;flex-shrink:0}
+.balbar{flex:1;height:14px;background:var(--bg);border-radius:3px;overflow:hidden}
+.balbar i{display:block;height:100%;transition:width .3s}
+.balbar-row .v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;width:52px;text-align:right}
+.team{border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--panel)}
+.team-head{display:flex;justify-content:space-between;align-items:baseline;padding:16px 20px;border-bottom:1px solid}
+.team-head .t{font-family:'Russo One','Arial Black',sans-serif;font-size:17px}
+.team-head .s{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.trow{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border)}
+.trow:last-child{border-bottom:0}
+.trow .info{margin-right:auto;min-width:0}
+.trow .n{font-size:14px;font-weight:500}
+.trow .d{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+.trow .p{font-family:'Russo One','Arial Black',sans-serif;font-size:17px}
+.iconbtn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:4px;padding:6px;cursor:pointer;transition:.15s;display:inline-flex}
+.iconbtn:hover{color:var(--text)}
+.xchip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;transition:.15s;border:1px solid;background:transparent;display:inline-flex;align-items:center;gap:6px}
+.verdict{font-size:14px;color:var(--muted);margin-top:14px}
+.note-cyan{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.hl-grid{display:grid;gap:14px 32px}
+@media(min-width:860px){.hl-grid{grid-template-columns:1fr 1fr}}
+.hl{display:flex;gap:12px}
+.hl i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.hl .t{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.hl p{font-size:13px;color:var(--muted);margin-top:2px}
+footer{border-top:1px solid var(--border);padding:20px 0}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.sideSplit{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+@media(min-width:768px){.sideSplit{grid-template-columns:1fr 1fr}}
+.sideSplit>div{background:var(--panel);padding:16px 20px}
+.mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.mini4 .l{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mini4 .v{font-family:'Russo One','Arial Black',sans-serif;font-size:15px;margin-top:4px}
+.svg-wrap{width:100%}
+svg text{font-family:'JetBrains Mono',ui-monospace,monospace}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap header-in">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+        <circle cx="17" cy="17" r="13" stroke="#fbbf24" stroke-width="2"/>
+        <circle cx="17" cy="17" r="2.5" fill="#fbbf24"/>
+        <path d="M17 1v6M17 27v6M1 17h6M27 17h6" stroke="#fbbf24" stroke-width="2"/>
+      </svg>
+      <div>
+        <h1>CS2 <em>Match Analytics</em></h1>
+        <div class="sub">Матчевый день · 10.11.2026 · 6 карт</div>
+      </div>
+    </div>
+    <nav id="tabs" aria-label="Разделы">
+      <button data-tab="overview" aria-current="page">Итоги</button>
+      <button data-tab="rating">Рейтинг</button>
+      <button data-tab="players">Игроки</button>
+      <button data-tab="balance">Баланс</button>
+    </nav>
+    <div class="status"><span class="dot"></span>Данные загружены</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="tab-overview" class="tab active stack"></section>
+  <section id="tab-rating" class="tab stack"></section>
+  <section id="tab-players" class="tab stack"></section>
+  <section id="tab-balance" class="tab stack"></section>
+</main>
+
+<footer><div class="wrap">
+  <span>CS2 Match Analytics · BI Dashboard</span>
+  <span>110 раундов · 752 убийства · 10 игроков</span>
+</div></footer>
+<script>
+"use strict";
+/* ================= ДАННЫЕ (CSV 10.11.2026) ================= */
+// [map, ctScore, tScore, side, nick, kills, deaths, assists, hs%, damage]
+const RAW = [
+["Dust II",13,10,"CT","qsok_bro",31,13,7,45,2998],["Dust II",13,10,"CT","Сберкот",22,14,7,31,2260],
+["Dust II",13,10,"CT","[FARSH]_jogik",11,17,8,45,1717],["Dust II",13,10,"CT","maZai",9,20,5,33,1196],
+["Dust II",13,10,"CT","ram",9,13,2,66,1037],["Dust II",13,10,"T","Quantum",22,17,4,50,2674],
+["Dust II",13,10,"T","mephitronik",11,17,3,54,1372],["Dust II",13,10,"T","Bankir",9,18,6,33,1254],
+["Dust II",13,10,"T","Sergeich",11,17,1,45,875],
+["Anubis",13,5,"CT","qsok_bro",25,7,4,28,2424],["Anubis",13,5,"CT","Сберкот",14,11,2,42,1608],
+["Anubis",13,5,"CT","[FARSH]_jogik",17,11,5,5,1594],["Anubis",13,5,"CT","maZai",13,9,4,23,1428],
+["Anubis",13,5,"CT","ram",8,11,2,62,880],["Anubis",13,5,"T","Quantum",17,16,4,23,1791],
+["Anubis",13,5,"T","Gruesome_Dragon",12,12,2,16,1269],["Anubis",13,5,"T","Bankir",7,17,5,57,1076],
+["Anubis",13,5,"T","mephitronik",8,16,5,50,997],["Anubis",13,5,"T","Sergeich",3,16,3,0,490],
+["Cache",13,5,"CT","Quantum",34,12,5,50,3179],["Cache",13,5,"CT","Gruesome_Dragon",20,11,3,15,2143],
+["Cache",13,5,"CT","maZai",14,11,6,14,1378],["Cache",13,5,"CT","mephitronik",8,11,1,12,736],
+["Cache",13,5,"CT","Bankir",4,14,3,25,527],["Cache",13,5,"T","Сберкот",21,17,3,42,2325],
+["Cache",13,5,"T","[FARSH]_jogik",13,15,6,38,1582],["Cache",13,5,"T","qsok_bro",12,15,5,58,1531],
+["Cache",13,5,"T","Sergeich",6,17,3,16,569],["Cache",13,5,"T","ram",6,17,2,33,560],
+["Ancient",3,13,"CT","Сберкот",20,11,5,45,1891],["Ancient",3,13,"CT","qsok_bro",13,13,2,61,1598],
+["Ancient",3,13,"CT","[FARSH]_jogik",9,15,4,22,1218],["Ancient",3,13,"CT","ram",9,14,2,66,935],
+["Ancient",3,13,"CT","Sergeich",0,15,2,0,307],["Ancient",3,13,"T","Quantum",27,8,4,37,2932],
+["Ancient",3,13,"T","maZai",12,10,4,25,1313],["Ancient",3,13,"T","Gruesome_Dragon",14,12,3,21,1310],
+["Ancient",3,13,"T","Bankir",6,12,2,33,804],["Ancient",3,13,"T","mephitronik",9,9,0,11,700],
+["Nuke",1,13,"CT","Quantum",8,14,5,50,1237],["Nuke",1,13,"CT","Gruesome_Dragon",6,14,1,33,670],
+["Nuke",1,13,"CT","maZai",4,14,3,25,480],["Nuke",1,13,"CT","mephitronik",2,14,0,50,257],
+["Nuke",1,13,"T","qsok_bro",21,7,9,52,2304],["Nuke",1,13,"T","Сберкот",15,4,4,13,1438],
+["Nuke",1,13,"T","ram",14,2,2,35,1270],["Nuke",1,13,"T","[FARSH]_jogik",11,5,3,45,1123],
+["Nuke",1,13,"T","Sergeich",8,8,2,25,742],
+["Inferno",8,13,"CT","Сберкот",17,16,6,17,2130],["Inferno",8,13,"CT","qsok_bro",23,13,3,43,1914],
+["Inferno",8,13,"CT","[FARSH]_jogik",13,19,5,53,1889],["Inferno",8,13,"CT","Sergeich",3,19,5,33,714],
+["Inferno",8,13,"CT","ram",7,17,2,57,618],["Inferno",8,13,"T","Quantum",25,12,7,52,2486],
+["Inferno",8,13,"T","Gruesome_Dragon",19,12,11,42,2412],["Inferno",8,13,"T","mephitronik",15,16,7,33,1635],
+["Inferno",8,13,"T","Bankir",14,15,3,28,1407],["Inferno",8,13,"T","maZai",11,10,6,18,844]
+];
+const MAPS = ["Dust II","Anubis","Cache","Ancient","Nuke","Inferno"];
+const TEAM_ORANGE = ["qsok_bro","Сберкот","[FARSH]_jogik","ram","Sergeich"];
+const C = { amber:"#fbbf24", cyan:"#22d3ee", blue:"#5da9ff", mint:"#34d399", red:"#f87171",
+  text:"#e8edf5", muted:"#8f9bb0", border:"#1a2540", dim:"#31405f", bg:"#050810" };
+const playerColor = n => TEAM_ORANGE.includes(n) ? C.amber : C.cyan;
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmt = (n,d=2) => n.toFixed(d).replace(".",",");
+const fmtInt = n => Math.round(n).toLocaleString("ru-RU");
+const roundsOf = r => r[1]+r[2];
+const didWin = r => r[3]==="CT" ? r[1]>r[2] : r[2]>r[1];
+
+function aggregate(rows){
+  const by = new Map();
+  for (const r of rows){ if(!by.has(r[4])) by.set(r[4],[]); by.get(r[4]).push(r); }
+  return [...by.entries()].map(([nick,rs])=>{
+    const kills=rs.reduce((s,r)=>s+r[5],0), deaths=rs.reduce((s,r)=>s+r[6],0),
+      assists=rs.reduce((s,r)=>s+r[7],0), damage=rs.reduce((s,r)=>s+r[9],0),
+      rounds=rs.reduce((s,r)=>s+roundsOf(r),0);
+    return { nick, maps:rs.length, rounds, kills, deaths, assists, damage,
+      kd: deaths>0?kills/deaths:kills, diff:kills-deaths,
+      adr: rounds>0?damage/rounds:0, kpr: rounds>0?kills/rounds:0, apr: rounds>0?assists/rounds:0,
+      hsPct: kills>0?rs.reduce((s,r)=>s+r[8]*r[5],0)/kills:0,
+      wins: rs.filter(didWin).length };
+  });
+}
+function withPower(stats){
+  if(!stats.length) return [];
+  const n=(arr,v)=>{const mn=Math.min(...arr),mx=Math.max(...arr);return mx>mn?(v-mn)/(mx-mn):.5;};
+  const kds=stats.map(s=>s.kd),adrs=stats.map(s=>s.adr),kprs=stats.map(s=>s.kpr);
+  return stats.map(s=>({...s,power:Math.round(100*(.35*n(kds,s.kd)+.4*n(adrs,s.adr)+.25*n(kprs,s.kpr)))}));
+}
+function filteredRows(map,side){ return RAW.filter(r=>(map==="ALL"||r[0]===map)&&(side==="ALL"||r[3]===side)); }
+function mapResults(){
+  return MAPS.map(m=>{
+    const rows=RAW.filter(r=>r[0]===m), r0=rows[0];
+    const mvp=[...rows].sort((a,b)=>b[5]-a[5])[0];
+    return { map:m, ct:r0[1], t:r0[2], mvp:mvp[4], mvpKills:mvp[5], mvpColor:playerColor(mvp[4]),
+      ctKills:rows.filter(r=>r[3]==="CT").reduce((s,r)=>s+r[5],0),
+      tKills:rows.filter(r=>r[3]==="T").reduce((s,r)=>s+r[5],0) };
+  });
+}
+/* ---- Балансировщик: перебор сочетаний ---- */
+function combinations(arr,k,start=0,acc=[],out=[]){
+  if(acc.length===k){out.push([...acc]);return out;}
+  for(let i=start;i<=arr.length-(k-acc.length);i++){acc.push(arr[i]);combinations(arr,k,i+1,acc,out);acc.pop();}
+  return out;
+}
+function bestSplit(players){
+  const n=players.length;
+  if(n<2) return {A:players.map(p=>p.nick),B:[],bench:[]};
+  const k=Math.floor(n/2), pw=new Map(players.map(p=>[p.nick,p.power])), nicks=players.map(p=>p.nick);
+  let best=null;
+  const consider=(a,b,bench)=>{
+    const d=Math.abs(a.reduce((s,x)=>s+pw.get(x),0)-b.reduce((s,x)=>s+pw.get(x),0));
+    if(!best||d<best.d) best={A:a,B:b,bench,d};
+  };
+  if(n%2===0){ for(const a of combinations(nicks,k)){const sa=new Set(a);consider(a,nicks.filter(x=>!sa.has(x)),[]);} }
+  else{ for(const a of combinations(nicks,k)){const sa=new Set(a);const rest=nicks.filter(x=>!sa.has(x));
+    for(const b of combinations(rest,k)){const sb=new Set(b);consider(a,b,rest.filter(x=>!sb.has(x)));} } }
+  return best;
+}
+
+/* ================= SVG-ГРАФИКИ ================= */
+function donutSVG(parts,size=230){
+  const cx=size/2, cy=size/2, r=size/2-8, ir=r*0.62;
+  const total=parts.reduce((s,p)=>s+p.value,0)||1;
+  let a0=-Math.PI/2, d="";
+  for(const p of parts){
+    const a1=a0+(p.value/total)*Math.PI*2;
+    const large=(a1-a0)>Math.PI?1:0;
+    d+=`<path d="M ${cx+Math.cos(a0)*r} ${cy+Math.sin(a0)*r} A ${r} ${r} 0 ${large} 1 ${cx+Math.cos(a1)*r} ${cy+Math.sin(a1)*r} L ${cx+Math.cos(a1)*ir} ${cy+Math.sin(a1)*ir} A ${ir} ${ir} 0 ${large} 0 ${cx+Math.cos(a0)*ir} ${cy+Math.sin(a0)*ir} Z" fill="${p.color}"/>`;
+    a0=a1;
+  }
+  return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:${size}px;display:block;margin:0 auto" role="img">${d}</svg>`;
+}
+function scatterSVG(points){
+  const W=560,H=300,pl=44,pr=16,pt=18,pb=36;
+  const xs=points.map(p=>p.adr), ys=points.map(p=>p.kd);
+  const x0=Math.min(...xs)-10, x1=Math.max(...xs)+10, y1=Math.max(...ys)+0.3;
+  const X=v=>pl+(v-x0)/(x1-x0)*(W-pl-pr), Y=v=>pt+(1-v/y1)*(H-pt-pb);
+  let g="";
+  for(let i=0;i<=4;i++){const gy=pt+(H-pt-pb)*i/4;
+    g+=`<line x1="${pl}" y1="${gy}" x2="${W-pr}" y2="${gy}" stroke="${C.border}" stroke-dasharray="3 3"/>
+        <text x="${pl-8}" y="${gy+4}" text-anchor="end" font-size="10" fill="${C.muted}">${fmt(y1*(1-i/4),1)}</text>`;}
+  const yk=Y(1);
+  g+=`<line x1="${pl}" y1="${yk}" x2="${W-pr}" y2="${yk}" stroke="${C.red}55" stroke-dasharray="4 4"/>`;
+  [x0+10,Math.round((x0+x1)/2/10)*10,x1-10].forEach(v=>{
+    g+=`<text x="${X(v)}" y="${H-14}" text-anchor="middle" font-size="10" fill="${C.muted}">${v}</text>`;});
+  g+=`<text x="${W-pr}" y="${H-14}" text-anchor="end" font-size="10" fill="${C.muted}">ADR →</text>
+      <text x="${pl}" y="10" font-size="10" fill="${C.muted}">K/D</text>`;
+  const kmax=Math.max(...points.map(p=>p.kills));
+  for(const p of points){
+    const r=5+9*(p.kills/kmax);
+    g+=`<circle cx="${X(p.adr)}" cy="${Y(p.kd)}" r="${r}" fill="${p.color}" fill-opacity=".8">
+          <title>${esc(p.name)}: ADR ${fmt(p.adr,1)}, K/D ${fmt(p.kd)}, ${p.kills} фрагов</title></circle>
+        <text x="${X(p.adr)}" y="${Y(p.kd)-r-5}" text-anchor="middle" font-size="9" fill="${C.muted}">${esc(p.name)}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block" role="img" aria-label="Диаграмма ADR и K/D">${g}</svg>`;
+}
+function radarSVG(axes, series, size=280){
+  const cx=size/2, cy=size/2+6, R=size/2-44, N=axes.length;
+  const pt=(i,v)=>{const a=-Math.PI/2+i*2*Math.PI/N;return [cx+Math.cos(a)*R*v, cy+Math.sin(a)*R*v];};
+  let g="";
+  for(const ring of [.25,.5,.75,1]){
+    g+=`<polygon points="${axes.map((_,i)=>pt(i,ring).join(",")).join(" ")}" fill="none" stroke="${C.border}"/>`;
+  }
+  axes.forEach((ax,i)=>{
+    const [x,y]=pt(i,1);
+    g+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${C.border}"/>`;
+    const [lx,ly]=pt(i,1.24);
+    g+=`<text x="${lx}" y="${ly+3}" text-anchor="middle" font-size="10" fill="${C.muted}">${esc(ax)}</text>`;
+  });
+  for(const s of series){
+    const points=s.values.map((v,i)=>pt(i,v/100).join(",")).join(" ");
+    g+=`<polygon points="${points}" fill="${s.color}" fill-opacity=".18" stroke="${s.color}" stroke-width="2">
+          <title>${esc(s.name)}</title></polygon>`;
+  }
+  return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:${size}px;display:block;margin:0 auto" role="img">${g}</svg>`;
+}
+</script>
+<script>
+"use strict";
+/* ================= ИТОГИ ================= */
+const ov = { map:"ALL", side:"ALL" };
+
+function chipsHTML(list, current, ns){
+  return list.map(m=>`<button class="chip ${current===m?'on':''}" data-ns="${ns}" data-val="${esc(m)}">${esc(m==="ALL"?"Все":m)}</button>`).join("");
+}
+function sideChipsHTML(current, ns){
+  return [["ALL","Обе",""],["CT","Спецназ","c-blue"],["T","Террористы",""]].map(([v,l,cls])=>
+    `<button class="chip ${current===v?'on '+cls:cls}" data-ns="${ns}" data-val="${v}">${l}</button>`).join("");
+}
+
+function renderOverview(){
+  const rows = filteredRows(ov.map, ov.side);
+  const stats = withPower(aggregate(rows));
+  const maps = mapResults().filter(m=>ov.map==="ALL"||m.map===ov.map);
+
+  const kills = rows.reduce((s,r)=>s+r[5],0), damage = rows.reduce((s,r)=>s+r[9],0);
+  const rounds = [...new Set(rows.map(r=>r[0]))].reduce((s,m)=>{const r0=RAW.find(r=>r[0]===m);return s+r0[1]+r0[2];},0);
+  const hsW = kills>0 ? rows.reduce((s,r)=>s+r[8]*r[5],0)/kills : 0;
+  const avgKd = stats.length ? stats.reduce((s,p)=>s+p.kd,0)/stats.length : 0;
+
+  const kpis = [
+    ["Карт сыграно", new Set(rows.map(r=>r[0])).size],
+    ["Раундов", fmtInt(rounds)], ["Убийств", fmtInt(kills)], ["Урона нанесено", fmtInt(damage)],
+    ["Средний HS%", fmt(hsW,1)+"%"], ["Средний K/D", fmt(avgKd)]
+  ].map(([l,v])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+
+  const mapBars = maps.map(m=>{
+    const total=m.ct+m.t, pct=m.ct/total*100;
+    return `<div class="maprow">
+      <div class="maphead">
+        <div><span class="mapname">${m.map}</span><span class="mapmvp">MVP: <b style="color:${m.mvpColor}">${esc(m.mvp)}</b> · ${m.mvpKills} фрагов</span></div>
+        <span class="mapscore"><span style="color:${m.ct>m.t?C.blue:C.muted}">${m.ct}</span><span style="color:${C.muted}"> : </span><span style="color:${m.t>m.ct?C.amber:C.muted}">${m.t}</span></span>
+      </div>
+      <div class="mapbar" role="img" aria-label="${m.map}: спецназ ${m.ct}, террористы ${m.t}">
+        <div style="width:${pct}%;background:${m.ct>m.t?C.blue:C.dim}"></div>
+        <div style="width:${100-pct}%;background:${m.t>m.ct?C.amber:C.dim}"></div>
+      </div></div>`;
+  }).join("");
+
+  const sorted=[...stats].sort((a,b)=>b.damage-a.damage);
+  const top6=sorted.slice(0,6).map(p=>({name:p.nick,value:p.damage,color:playerColor(p.nick)}));
+  const rest=sorted.slice(6).reduce((s,p)=>s+p.damage,0);
+  if(rest>0) top6.push({name:"Остальные",value:rest,color:"#3a4a6b"});
+  const donut = donutSVG(top6);
+  const donutLegend = top6.map(d=>`<li style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 0">
+    <span style="display:flex;align-items:center;gap:8px"><i style="width:8px;height:8px;border-radius:50%;background:${d.color};display:inline-block"></i>${esc(d.name)}</span>
+    <span style="color:${C.muted}">${fmtInt(d.value)}</span></li>`).join("");
+
+  const scatter = scatterSVG(stats.map(p=>({name:p.nick,adr:+p.adr.toFixed(1),kd:+p.kd.toFixed(2),kills:p.kills,color:playerColor(p.nick)})));
+
+  const top3=[...stats].sort((a,b)=>b.power-a.power).slice(0,3);
+  const maxOf=f=>Math.max(...stats.map(p=>p[f]),1);
+  const radar = stats.length ? radarSVG(["K/D","ADR","KPR","HS%","AST/R"], top3.map(p=>({
+    name:p.nick,color:playerColor(p.nick),
+    values:[p.kd/maxOf("kd")*100,p.adr/maxOf("adr")*100,p.kpr/maxOf("kpr")*100,p.hsPct/maxOf("hsPct")*100,p.apr/maxOf("apr")*100]
+  }))) : "";
+
+  const intensity = maps.map(m=>{const tot=m.ctKills+m.tKills;
+    return `<div class="maprow"><div class="maphead">
+      <div><span class="mapname" style="font-size:13px">${m.map}</span></div>
+      <span class="mapscore" style="font-size:12px;color:${C.muted}">${tot} убийств</span></div>
+      <div class="mapbar" style="height:12px"><div style="width:${m.ctKills/tot*100}%;background:${C.blue}"></div>
+      <div style="width:${m.tKills/tot*100}%;background:${C.amber}"></div></div></div>`;}).join("");
+
+  document.getElementById("tab-overview").innerHTML = `
+    <div class="panel filters">
+      <div class="fgroup"><span class="flabel">Карта</span>${chipsHTML(["ALL",...MAPS],ov.map,"ov-map")}</div>
+      <div class="fgroup"><span class="flabel">Сторона</span>${sideChipsHTML(ov.side,"ov-side")}</div>
+    </div>
+    <div class="kpis">${kpis}</div>
+    <div class="g-5">
+      <div class="panel">
+        <div class="sec-title">Результаты по картам</div>
+        <div class="sec-sub">Победы раундов по сторонам; подпись — MVP карты</div>
+        ${mapBars}
+        <div class="legend"><span class="leg"><i style="background:${C.blue}"></i>Победа спецназа</span>
+        <span class="leg"><i style="background:${C.amber}"></i>Победа террористов</span></div>
+      </div>
+      <div class="panel">
+        <div class="sec-title">Доля урона</div>
+        <div class="sec-sub">Распределение суммарного урона</div>
+        ${donut}<ul style="list-style:none;margin-top:10px">${donutLegend}</ul>
+      </div>
+    </div>
+    <div class="g-5">
+      <div class="panel">
+        <div class="sec-title">Карта эффективности: ADR × K/D</div>
+        <div class="sec-sub">Каждая точка — игрок; размер точки — число убийств. Правее и выше = сильнее</div>
+        ${scatter}
+      </div>
+      <div class="panel">
+        <div class="sec-title">Профиль лидеров</div>
+        <div class="sec-sub">Топ-3 по PWR, нормировано к лучшему значению</div>
+        ${radar}
+        <div class="legend">${top3.map(p=>`<span class="leg"><i style="background:${playerColor(p.nick)}"></i>${esc(p.nick)}</span>`).join("")}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="sec-title">Интенсивность карт</div>
+      <div class="sec-sub">Суммарные убийства обеих сторон на каждой карте</div>
+      ${intensity}
+      <div class="legend"><span class="leg"><i style="background:${C.blue}"></i>Убийства за спецназ</span>
+      <span class="leg"><i style="background:${C.amber}"></i>Убийства за террористов</span></div>
+    </div>
+    <div class="panel">
+      <div class="sec-title" style="margin-bottom:14px">Хайлайты дня</div>
+      <div class="hl-grid">
+        ${[["Рекорд серии","Quantum — 34 убийства на Cache, лучший результат дня (K/D 2,83)",C.amber],
+           ["MVP серии","qsok_bro — K/D 1,84 и +57 по разнице, лучший на 3 картах из 6",C.amber],
+           ["Снайперская точность","ram — 52% убийств в голову, лучший процент серии",C.cyan],
+           ["Машина урона","Quantum — ADR 130,0: в среднем 130 единиц урона за раунд",C.cyan]]
+          .map(([t,p,c])=>`<div class="hl"><i style="background:${c}"></i><div><div class="t" style="color:${c}">${t}</div><p>${p}</p></div></div>`).join("")}
+      </div>
+    </div>`;
+  bindChips("tab-overview");
+}
+
+/* ================= РЕЙТИНГ ================= */
+const rt = { map:"ALL", side:"ALL", q:"", key:"power", dir:-1 };
+const RCOLS = [
+  ["power","PWR","Силовой рейтинг: смесь K/D, ADR и KPR (0–100)"],
+  ["kills","K"],["deaths","D"],["assists","A"],["kd","K/D"],["diff","+/−"],
+  ["adr","ADR","Средний урон за раунд"],["kpr","KPR","Убийств за раунд"],
+  ["hsPct","HS%"],["damage","Урон"],["wins","Побед"]
+];
+
+function renderRating(){
+  const stats = withPower(aggregate(filteredRows(rt.map,rt.side)));
+  const q = rt.q.trim().toLowerCase();
+  const list = (q?stats.filter(p=>p.nick.toLowerCase().includes(q)):stats)
+    .slice().sort((a,b)=>(a[rt.key]-b[rt.key])*rt.dir || (b.power-a.power));
+  const maxP = Math.max(...stats.map(p=>p.power),1);
+
+  const head = `<tr><th>#</th><th>Игрок</th>${RCOLS.map(([k,l,hint])=>{
+    const act=rt.key===k;
+    return `<th class="num ${act?'sorted':''}" ${hint?`title="${hint}"`:""}>
+      <button data-sort="${k}" aria-label="Сортировать по ${l}">${l}${act?(rt.dir===-1?" ▾":" ▴"):""}</button></th>`;
+  }).join("")}</tr>`;
+
+  const body = list.map((p,i)=>{
+    const c=playerColor(p.nick);
+    const init=p.nick.replace(/^\[.*?\]/,"").slice(0,2).toUpperCase();
+    return `<tr>
+      <td class="mono" style="font-size:11px;color:${C.muted}">${i+1}</td>
+      <td><span style="display:flex;align-items:center;gap:10px">
+        <span class="avatar" style="background:${c}1f;color:${c};border:1px solid ${c}55">${esc(init)}</span>
+        <b style="color:${c}">${esc(p.nick)}</b></span></td>
+      <td class="num"><span class="pwrcell"><b class="mono">${p.power}</b>
+        <span class="pwrbar"><i style="width:${p.power/maxP*100}%;background:${c}"></i></span></span></td>
+      <td class="num mono"><b>${fmtInt(p.kills)}</b></td>
+      <td class="num mono">${fmtInt(p.deaths)}</td>
+      <td class="num mono">${fmtInt(p.assists)}</td>
+      <td class="num mono ${p.kd>=1?"pos":"neg"}">${fmt(p.kd)}</td>
+      <td class="num mono ${p.diff>=0?"pos":"neg"}">${p.diff>0?"+"+p.diff:p.diff}</td>
+      <td class="num mono"><b>${fmt(p.adr,1)}</b></td>
+      <td class="num mono">${fmt(p.kpr)}</td>
+      <td class="num mono">${fmt(p.hsPct,0)}%</td>
+      <td class="num mono">${fmtInt(p.damage)}</td>
+      <td class="num mono">${p.wins}/${p.maps}</td></tr>`;
+  }).join("") || `<tr><td colspan="13" style="text-align:center;padding:40px;color:${C.muted}">Ничего не найдено — измените фильтры или запрос.</td></tr>`;
+
+  document.getElementById("tab-rating").innerHTML = `
+    <div class="panel">
+      <div class="filters">
+        <div class="fgroup"><span class="flabel">Карта</span>${chipsHTML(["ALL",...MAPS],rt.map,"rt-map")}</div>
+        <div class="fgroup"><span class="flabel">Сторона</span>${sideChipsHTML(rt.side,"rt-side")}</div>
+      </div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="rt-search" value="${esc(rt.q)}" placeholder="Поиск игрока…" aria-label="Поиск игрока">
+      </div>
+    </div>
+    <div class="panel flush">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div class="sec-title">Таблица рейтинга</div>
+        <div class="sec-sub" style="margin-bottom:0">${list.length} игроков · нажмите на заголовок колонки для сортировки</div>
+      </div>
+      <div class="tbl-wrap"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>
+      <div class="tbl-foot">PWR = 0,35·K/D + 0,40·ADR + 0,25·KPR, нормировано внутри выборки · HS% взвешен по убийствам</div>
+    </div>`;
+  bindChips("tab-rating");
+  document.getElementById("rt-search").addEventListener("input",e=>{rt.q=e.target.value;renderRating();
+    const el=document.getElementById("rt-search");el.focus();el.setSelectionRange(el.value.length,el.value.length);});
+  document.querySelectorAll("#tab-rating [data-sort]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.sort;
+    if(rt.key===k) rt.dir*=-1; else {rt.key=k;rt.dir=-1;}
+    renderRating();
+  }));
+}
+</script>
+<script>
+"use strict";
+/* ================= ИГРОКИ ================= */
+const pl = { nick:null, side:"ALL" };
+
+function renderPlayers(){
+  const all = withPower(aggregate(RAW)).sort((a,b)=>b.power-a.power);
+  if(!pl.nick) pl.nick = all[0].nick;
+  const scopedRowsAll = pl.side==="ALL" ? RAW : RAW.filter(r=>r[3]===pl.side);
+  const scopedAll = withPower(aggregate(scopedRowsAll)).sort((a,b)=>b.power-a.power);
+  const player = scopedAll.find(p=>p.nick===pl.nick) || all.find(p=>p.nick===pl.nick) || all[0];
+  const color = playerColor(player.nick);
+  const rows = RAW.filter(r=>r[4]===player.nick && (pl.side==="ALL"||r[3]===pl.side));
+
+  const perMap = MAPS.map(m=>{
+    const r=rows.find(x=>x[0]===m);
+    return { map:m, kills:r?r[5]:null, kd:r?r[5]/Math.max(r[6],1):null,
+      adr:r?r[9]/(r[1]+r[2]):null, won:r?didWin(r):null };
+  });
+  const played=perMap.filter(m=>m.kills!==null);
+  const best=[...played].sort((a,b)=>b.kd-a.kd)[0], worst=[...played].sort((a,b)=>a.kd-b.kd)[0];
+  const kmax=Math.max(...played.map(m=>m.kills),1);
+
+  const maxOf=f=>Math.max(...all.map(p=>p[f]),1);
+  const radar=radarSVG(["K/D","ADR","KPR","HS%","AST/R"],[{
+    name:player.nick,color,
+    values:[player.kd/maxOf("kd")*100,player.adr/maxOf("adr")*100,player.kpr/maxOf("kpr")*100,
+      player.hsPct/maxOf("hsPct")*100,player.apr/maxOf("apr")*100]}]);
+
+  const statBlocks=[
+    ["PWR",player.power,color],["K / D / A",`${player.kills} / ${player.deaths} / ${player.assists}`],
+    ["K/D",fmt(player.kd),player.kd>=1?C.mint:C.red],
+    ["Разница",player.diff>0?"+"+player.diff:player.diff,player.diff>=0?C.mint:C.red],
+    ["ADR",fmt(player.adr,1)],["KPR",fmt(player.kpr)],["HS%",fmt(player.hsPct,1)+"%"],
+    ["Урон",fmtInt(player.damage)],["Побед на картах",`${player.wins}/${player.maps}`]
+  ].map(([l,v,c])=>`<div><div class="l">${l}</div><div class="v" style="color:${c||"var(--cs-text,var(--text))"}">${v}</div></div>`).join("");
+
+  const bars=perMap.map(m=>{
+    const h=m.kills===null?3:m.kills/kmax*100;
+    const bg=m.kills===null?C.border:(m.won?color:C.dim);
+    const op=m.kills===kmax?1:.7;
+    return `<div class="vbar"><div class="b" style="height:${h}%;background:${bg};opacity:${op}">
+      ${m.kills!==null?`<span>${m.kills}</span>`:""}</div><div class="x">${m.map}</div></div>`;
+  }).join("");
+
+  const sideBlock=s=>{
+    const d=aggregate(rows.filter(r=>r[3]===s))[0];
+    const label=s==="CT"?"Спецназ":"Террористы", c=s==="CT"?C.blue:C.amber;
+    return `<div><div class="mono" style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:${c}">${label}</div>
+      ${d?`<div class="mini4">
+        <div><div class="l">K/D</div><div class="v">${fmt(d.kd)}</div></div>
+        <div><div class="l">ADR</div><div class="v">${fmt(d.adr,1)}</div></div>
+        <div><div class="l">Фраги</div><div class="v">${d.kills}</div></div>
+        <div><div class="l">Раунды</div><div class="v">${d.rounds}</div></div></div>`
+      :`<p style="margin-top:12px;font-size:13px;color:${C.muted}">Нет игр за эту сторону.</p>`}</div>`;
+  };
+
+  const pChips=all.map(p=>{
+    const c=playerColor(p.nick), act=p.nick===player.nick;
+    return `<button class="pchip" data-player="${esc(p.nick)}" role="option" aria-selected="${act}"
+      style="${act?`background:${c};border-color:${c};color:#0a0c12;font-weight:700`:`color:${C.muted}`}">${esc(p.nick)}</button>`;
+  }).join("");
+
+  const init=player.nick.replace(/^\[.*?\]/,"").slice(0,2).toUpperCase();
+  document.getElementById("tab-players").innerHTML=`
+    <div class="panel">
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px">
+        <span class="flabel">Выберите игрока</span>
+        <div class="fgroup"><span class="flabel">Сторона</span>${sideChipsHTML(pl.side,"pl-side")}</div>
+      </div>
+      <div class="pchips" role="listbox" aria-label="Игроки">${pChips}</div>
+    </div>
+    <div class="panel flush">
+      <div class="phead">
+        <span class="avatar" style="background:${color}1f;color:${color};border:1px solid ${color}55">${esc(init)}</span>
+        <div>
+          <div class="pname" style="color:${color}">${esc(player.nick)}</div>
+          <div class="pmeta">#${scopedAll.findIndex(p=>p.nick===player.nick)+1} в рейтинге PWR · ${player.maps} карт · ${player.rounds} раундов${pl.side!=="ALL"?` · только за сторону «${pl.side==="CT"?"Спецназ":"Террористы"}»`:""}</div>
+        </div>
+        <div class="pbest">
+          <div><div class="l">Лучшая карта</div><div class="v" style="color:${C.mint}">${best?best.map:"—"} <small>K/D ${best?fmt(best.kd):""}</small></div></div>
+          <div><div class="l">Худшая карта</div><div class="v" style="color:${C.red}">${worst?worst.map:"—"} <small>K/D ${worst?fmt(worst.kd):""}</small></div></div>
+        </div>
+      </div>
+      <div class="statgrid">${statBlocks}</div>
+    </div>
+    <div class="g-5">
+      <div class="panel">
+        <div class="sec-title">Перформанс по картам</div>
+        <div class="sec-sub">Убийства на каждой карте; цвет — победа или поражение карты игроком</div>
+        <div class="vbars">${bars}</div>
+        <div class="legend"><span class="leg"><i style="background:${color}"></i>Карта выиграна</span>
+        <span class="leg"><i style="background:${C.dim}"></i>Карта проиграна / не играл</span></div>
+      </div>
+      <div class="panel">
+        <div class="sec-title">Профиль игрока</div>
+        <div class="sec-sub">Нормировано к лучшему значению среди всех игроков (=100%)</div>
+        ${radar}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="sec-title">Сплит по сторонам</div>
+      <div class="sec-sub">Эффективность игрока за защиту и атаку в текущей выборке</div>
+      <div class="sideSplit">${sideBlock("CT")}${sideBlock("T")}</div>
+    </div>`;
+  bindChips("tab-players");
+  document.querySelectorAll("#tab-players [data-player]").forEach(b=>
+    b.addEventListener("click",()=>{pl.nick=b.dataset.player;renderPlayers();}));
+}
+
+/* ================= БАЛАНС ================= */
+const bal = { excluded:new Set(), slots:null };
+
+function renderBalance(){
+  const all = withPower(aggregate(RAW));
+  const active = all.filter(p=>!bal.excluded.has(p.nick));
+  if(!bal.slots){
+    const r=bestSplit(active); const map={};
+    r.A.forEach(n=>map[n]="A"); r.B.forEach(n=>map[n]="B"); r.bench.forEach(n=>map[n]="bench");
+    bal.slots=map; bal.auto=true;
+  }
+  const teamA=active.filter(p=>bal.slots[p.nick]==="A").sort((a,b)=>b.power-a.power);
+  const teamB=active.filter(p=>bal.slots[p.nick]==="B").sort((a,b)=>b.power-a.power);
+  const bench=active.filter(p=>bal.slots[p.nick]==="bench");
+  const sumA=teamA.reduce((s,p)=>s+p.power,0), sumB=teamB.reduce((s,p)=>s+p.power,0);
+  const diff=Math.abs(sumA-sumB), maxS=Math.max(sumA,sumB,1);
+  const adrA=teamA.length?teamA.reduce((s,p)=>s+p.adr,0)/teamA.length:0;
+  const adrB=teamB.length?teamB.reduce((s,p)=>s+p.adr,0)/teamB.length:0;
+  const verdict = diff===0?"Идеальный баланс: силы команд равны."
+    : diff<=15?"Баланс отличный — разница в пределах погрешности одного хорошего раунда."
+    : diff<=40?"Баланс приемлемый, но есть небольшой перевес."
+    : "Команды заметно неравны — попробуйте автобаланс.";
+  const diffColor = diff<=15?C.mint : diff<=40?C.amber : C.red;
+
+  const xChips=all.map(p=>{
+    const off=bal.excluded.has(p.nick), c=playerColor(p.nick);
+    return `<button class="xchip" data-excl="${esc(p.nick)}" aria-pressed="${off}"
+      title="${off?"Вернуть в подбор":"Исключить из подбора"}"
+      style="border-color:${off?"var(--border)":c+"66"};color:${off?C.muted:c};background:${off?"transparent":c+"14"};opacity:${off?.45:1}">
+      ${off?"＋":"−"} ${esc(p.nick)} <span style="color:${C.muted}">${p.power}</span></button>`;
+  }).join("");
+
+  const teamHTML=(team,color,title,sumP,adr,other)=>`
+    <div class="team">
+      <div class="team-head" style="border-color:${color}44;background:${color}0d">
+        <span class="t" style="color:${color}">${title}</span>
+        <span class="s">ΣPWR <b style="color:${color}">${sumP}</b> · ADR ${fmt(adr,1)}</span>
+      </div>
+      ${team.map(p=>{const c=playerColor(p.nick),init=p.nick.replace(/^\[.*?\]/,"").slice(0,2).toUpperCase();
+        return `<div class="trow">
+          <span class="avatar" style="background:${c}1f;color:${c};border:1px solid ${c}55">${esc(init)}</span>
+          <span class="info"><span class="n" style="color:${c}">${esc(p.nick)}</span>
+            <span class="d">K/D ${fmt(p.kd)} · ADR ${fmt(p.adr,1)} · HS ${fmt(p.hsPct,0)}%</span></span>
+          <span class="p" style="color:${color}">${p.power}</span>
+          <button class="iconbtn" data-move="${esc(p.nick)}" data-to="${other}" title="В команду ${other}" aria-label="${esc(p.nick)}: в команду ${other}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg></button>
+          <button class="iconbtn" data-move="${esc(p.nick)}" data-to="bench" title="В запас" aria-label="${esc(p.nick)}: в запас">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0"/><path d="M17 5h6"/></svg></button>
+        </div>`;}).join("") || `<div style="padding:32px;text-align:center;font-size:13px;color:${C.muted}">Пусто — переместите игроков сюда или запустите автобаланс.</div>`}
+    </div>`;
+
+  const benchHTML = bench.length?`
+    <div class="panel"><div class="sec-title">Запас</div>
+      <div class="sec-sub">Нечётное число игроков — один остаётся в запасе</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${bench.map(p=>{const c=playerColor(p.nick);
+        return `<span style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:4px;padding:6px 10px">
+          <span style="color:${c};font-size:13px">${esc(p.nick)}</span>
+          <span class="mono" style="font-size:11px;color:${C.muted}">${p.power}</span>
+          <button class="iconbtn" data-move="${esc(p.nick)}" data-to="A" title="В команду A" style="color:${C.amber}">A</button>
+          <button class="iconbtn" data-move="${esc(p.nick)}" data-to="B" title="В команду B" style="color:${C.cyan}">B</button>
+        </span>`;}).join("")}</div></div>`:"";
+
+  document.getElementById("tab-balance").innerHTML=`
+    <div class="panel">
+      <div class="sec-title">Балансировщик составов</div>
+      <div class="sec-sub">Сила игрока = PWR (смесь K/D, ADR, KPR за всю серию). Исключите игроков, запустите автобаланс или переставьте игроков вручную.</div>
+      <div class="pchips">${xChips}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px">
+        <button class="btn btn-primary" id="bal-auto" ${active.length<2?"disabled":""}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.6-8.6c.8-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
+          Автобаланс</button>
+        <button class="btn btn-ghost" id="bal-swap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+          Поменять стороны</button>
+        ${bal.auto?"":`<span class="note-cyan">Ручной режим — состав изменён</span>`}
+        <span class="flabel" style="margin-left:auto">В подборе: ${active.length} · размер команды: ${Math.floor(active.length/2)}</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <span class="flabel">Разница силы</span>
+        <span class="display" style="font-size:30px;color:${diffColor}">${diff} <span class="mono" style="font-size:11px;color:${C.muted}">PWR</span></span>
+      </div>
+      <div class="balbar-row"><span class="l">Команда A</span><div class="balbar"><i style="width:${sumA/maxS*100}%;background:${C.amber}"></i></div><span class="v" style="color:${C.amber}">${sumA}</span></div>
+      <div class="balbar-row"><span class="l">Команда B</span><div class="balbar"><i style="width:${sumB/maxS*100}%;background:${C.cyan}"></i></div><span class="v" style="color:${C.cyan}">${sumB}</span></div>
+      <p class="verdict">${verdict}</p>
+    </div>
+    <div class="g-2">
+      ${teamHTML(teamA,C.amber,"Команда A",sumA,adrA,"B")}
+      ${teamHTML(teamB,C.cyan,"Команда B",sumB,adrB,"A")}
+    </div>
+    ${benchHTML}`;
+
+  document.getElementById("bal-auto").addEventListener("click",()=>{bal.slots=null;renderBalance();});
+  document.getElementById("bal-swap").addEventListener("click",()=>{
+    const next={};
+    for(const p of active) next[p.nick]=bal.slots[p.nick]==="A"?"B":bal.slots[p.nick]==="B"?"A":"bench";
+    bal.slots=next; bal.auto=false; renderBalance();
+  });
+  document.querySelectorAll("#tab-balance [data-excl]").forEach(b=>b.addEventListener("click",()=>{
+    const n=b.dataset.excl;
+    bal.excluded.has(n)?bal.excluded.delete(n):bal.excluded.add(n);
+    bal.slots=null; renderBalance();
+  }));
+  document.querySelectorAll("#tab-balance [data-move]").forEach(b=>b.addEventListener("click",()=>{
+    bal.slots[b.dataset.move]=b.dataset.to; bal.auto=false; renderBalance();
+  }));
+}
+
+/* ================= НАВИГАЦИЯ ================= */
+function bindChips(scopeId){
+  document.querySelectorAll(`#${scopeId} [data-ns]`).forEach(b=>b.addEventListener("click",()=>{
+    const ns=b.dataset.ns, v=b.dataset.val;
+    if(ns==="ov-map") ov.map=v; if(ns==="ov-side") ov.side=v;
+    if(ns==="rt-map") rt.map=v; if(ns==="rt-side") rt.side=v;
+    if(ns==="pl-side") pl.side=v;
+    if(scopeId==="tab-overview") renderOverview();
+    if(scopeId==="tab-rating") renderRating();
+    if(scopeId==="tab-players") renderPlayers();
+  }));
+}
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#tabs button").forEach(x=>x.removeAttribute("aria-current"));
+  b.setAttribute("aria-current","page");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+b.dataset.tab).classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
+}));
+
+renderOverview(); renderRating(); renderPlayers(); renderBalance();
+</script>
+</body>
+</html>
